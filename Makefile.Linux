@@ -1,0 +1,50 @@
+# -*-Makefile-*-
+
+# --------------------------------------------------------------------------------
+# Define X Windows specs:
+# --------------------------------------------------------------------------------
+ifdef USE_XLIB
+  CXX_LINK_SPEC += -lX11 -lXtst
+endif
+
+# --------------------------------------------------------------------------------
+# Define compiler paths and link specs:
+# --------------------------------------------------------------------------------
+
+# Default to native compiler 
+ifndef COMPILER_TYPE
+  COMPILER_TYPE=native
+endif
+
+CXX_ERROR_SPEC += -Wall -Werror -Wsynth -Wno-comment -Wreturn-type
+BITSIZE := $(shell uname -m | sed 's%i686%32%g; s%x86_64%64%g')
+CXX_HEAD_DIR=/usr
+
+CXX_LIB_DIR = $(CXX_HEAD_DIR)/lib
+ifeq "$(BITSIZE)" "64"
+  CXX_LIB_DIR = $(CXX_HEAD_DIR)/lib64
+endif
+
+export LD_LIBRARY_PATH := $(CXX_LIB_DIR):$(LD_LIBRARY_PATH)
+CXX_PATH=$(CXX_HEAD_DIR)/bin/g++
+export PATH := $(CXX_HEAD_DIR)/bin:$(PATH)
+
+CXX_LINK_SPEC += -L$(CXX_LIB_DIR) -lstdc++
+
+# Dependency generation:
+CC_DEPS_FLAGS = -MD
+
+POSITION_INDEP_FLAGS=-fPIC
+
+# --------------------------------------------------------------------------------
+# Define debug options:
+# --------------------------------------------------------------------------------
+ifeq ($(DEBUG_ENABLED),yes)
+  OPT_FLAGS=-DDEBUG -g -ggdb -gstabs+
+else
+  OPT_FLAGS=-DNDEBUG
+endif
+
+OPT_FLAGS += -O$(OPT_LEVEL)
+
+
