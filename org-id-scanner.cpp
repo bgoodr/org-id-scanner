@@ -21,25 +21,48 @@
 
 #include <limits.h> // PATH_MAX http://stackoverflow.com/a/9449307/257924
 
+namespace VerboseNS {
+  
+  enum VerbosityLevel {
+    E_NONE      = 0
+    , E_VERBOSE = 1 << 0
+    , E_DEBUG   = 1 << 1
+  };
+
+  template <typename T>
+  class VerbosityTracker
+  {
+  public:
+
+    VerbosityTracker() : _verbosity(E_NONE) {}
+
+    bool isAtVerbosity(int level) { return (_verbosity & level) != 0; }
+
+    T & setVerbosity(int value)
+    {
+      _verbosity = value;
+      return *this;
+    }
+  
+  private:
+    int _verbosity;
+  };
+
+};
+
 class UniqueFileVisitor
 {
 public:
   virtual bool visit(const std::string & absPath) = 0;
 };
 
-class UniqueFileScanner
+class UniqueFileScanner : public VerboseNS::VerbosityTracker<UniqueFileScanner>
 {
 public:
   UniqueFileScanner()
-    : _debug(false)
-    , _visitor(NULL)
+    : _visitor(NULL)
   {}
 
-  UniqueFileScanner & setDebug(bool debug)
-  {
-    _debug = debug;
-    return *this;
-  }
 
   UniqueFileScanner & setVisitor(UniqueFileVisitor * visitor)
   {
@@ -71,7 +94,7 @@ public:
       if (basename == "." || basename == ".." || basename == ".git")
         continue;
 
-      if (_debug) {
+      if (isAtVerbosity(VerboseNS::E_DEBUG)) {
         std::cout << std::endl;
       }
 
@@ -79,7 +102,7 @@ public:
       absPath = inDir;
       absPath += "/";
       absPath += basename;
-      if (_debug) {
+      if (isAtVerbosity(VerboseNS::E_DEBUG)) {
         std::cout << "absPath  " << absPath << std::endl;
       }
 
@@ -97,7 +120,7 @@ public:
           continue;
         }
         realPath = realPath;
-        if (_debug) {
+        if (isAtVerbosity(VerboseNS::E_DEBUG)) {
           std::cout << "realPath " << realPath << std::endl;
         }
 
@@ -110,7 +133,7 @@ public:
         _seen.insert(realPath);
           
         if ( S_ISDIR(statbuf.st_mode) ) {
-          if (_debug) {
+          if (isAtVerbosity(VerboseNS::E_DEBUG)) {
             std::cout << "directory absPath " << absPath << std::endl;
           }
           // recurse:
@@ -118,7 +141,7 @@ public:
             return false;
           }
         } else if ( S_ISREG(statbuf.st_mode) || S_ISLNK(statbuf.st_mode) ) {
-          if (_debug) {
+          if (isAtVerbosity(VerboseNS::E_DEBUG)) {
             std::cout << "parsable absPath " << absPath << std::endl;
           }
           if (!_visitor->visit(absPath))
@@ -144,45 +167,36 @@ public:
   }
 
 private:
-  bool _debug;
   typedef std::set<std::string> SetT;
   SetT _seen;
   UniqueFileVisitor * _visitor; // not owned by this object.
 };
 
-
-class OrgIDParser : public UniqueFileVisitor
+class OrgIDParser
+  : public UniqueFileVisitor
+  , public VerboseNS::VerbosityTracker<UniqueFileVisitor>
 {
 public:
- OrgIDParser() : _debug(false) {}
-
-  OrgIDParser & setDebug(bool debug)
-  {
-    _debug = debug;
-    return *this;
-  }
+ OrgIDParser() {}
 
   virtual bool visit(const std::string & absPath)
   {
     static const char * orgExtension = ".org";
     std::size_t pos;
     if ( (pos = absPath.rfind(orgExtension)) != std::string::npos ) {
-      if (_debug) {
+      if (isAtVerbosity(VerboseNS::E_DEBUG)) {
         std::cout << "Processing " << absPath << std::endl;
       }
     }
     return true;
   }
-  
-private:
-  bool _debug;
 };
 
 int main(int argc, char *argv[], char *const envp[])
 {
   std::cout << "main begin" << std::endl;
 
-  bool debug = false;
+  int verbosity = VerboseNS::E_NONE;
   bool readingDirectories = false;
   typedef std::vector<std::string> DirectoryListT;
   DirectoryListT directories;
@@ -195,8 +209,10 @@ int main(int argc, char *argv[], char *const envp[])
     } else {
       if (arg == "--") {
         readingDirectories = true;
+      } else if (arg == "-verbose") {
+        verbosity |= VerboseNS::E_VERBOSE;
       } else if (arg == "-debug") {
-        debug = true;
+        verbosity |= VerboseNS::E_DEBUG;
       }
     }
   }
@@ -208,13 +224,13 @@ int main(int argc, char *argv[], char *const envp[])
 
   // OrgIDParser will house the results:
   OrgIDParser parser;
-  parser
-    .setDebug(debug);
+  parser.setVerbosity(verbosity);
 
-  // UniqueFileScanner
+  // UniqueFileScanner scans for files and removes duplicates, visiting each
+  // with the parser:
   UniqueFileScanner scanner;
   scanner
-    .setDebug(debug)
+    .setVerbosity(verbosity)
     .setVisitor(&parser);
   for (DirectoryListT::iterator cur = directories.begin(); cur != directories.end(); ++cur)
   {
