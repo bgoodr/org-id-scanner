@@ -1,6 +1,7 @@
 // -*-mode: c++; indent-tabs-mode: nil; -*-
 
 #include <iostream>
+#include <fstream>
 
 #include <sys/types.h> // opendir
 #include <dirent.h>    // opendir
@@ -214,13 +215,29 @@ public:
 
   bool parse(const std::string & absPath)
   {
-    mmap(  NULL           // addr: Let the operating system choose
-         ,                // length: 
-         , PROT_READ      // prot: read-only
-         , MAP_PRIVATE    // flags: No need too update the file; we are just reading it.
-         ,                // fd:
-         ,                // offset:
-     )
+    std::ifstream stream(absPath.c_str(), std::ifstream::binary);
+    if (!stream) {
+      std::cerr << "ERROR: Failed to open: " << absPath << std::endl;
+      return false;
+    }
+
+    // Get length of file:
+    stream.seekg (0, stream.end);
+    std::streampos length = stream.tellg();
+    stream.seekg (0, stream.beg);
+
+    // Allocate memory:
+    std::vector<char> buffer(length);
+
+    // Read data as a block:
+    stream.read(&(buffer[0]), length);
+
+    stream.close();
+
+    // Print content:
+    std::cout.write(&(buffer[0]), length);
+
+    return true;
   }
 
 
