@@ -29,7 +29,6 @@ namespace VerboseNS {
     , E_DEBUG   = 1 << 1
   };
 
-  template <typename T>
   class VerbosityTracker
   {
   public:
@@ -38,11 +37,18 @@ namespace VerboseNS {
 
     bool isAtVerbosity(int level) { return (_verbosity & level) != 0; }
 
-    T & setVerbosity(int value)
+    void setVerbosity(int value)
     {
       _verbosity = value;
-      return *this;
     }
+
+#define DEFINE_SET_VERBOSITY_METHOD(TYPE)       \
+  TYPE & setVerbosity(int value) \
+  { \
+    _verbosity.setVerbosity(value); \
+    return *this; \
+  }
+  
   
   private:
     int _verbosity;
@@ -56,7 +62,7 @@ public:
   virtual bool visit(const std::string & absPath) = 0;
 };
 
-class UniqueFileScanner : public VerboseNS::VerbosityTracker<UniqueFileScanner>
+class UniqueFileScanner
 {
 public:
   UniqueFileScanner()
@@ -69,7 +75,9 @@ public:
     _visitor = visitor;
     return *this;
   }
-  
+
+  DEFINE_SET_VERBOSITY_METHOD(UniqueFileScanner);
+
   bool scan(const std::string & inDir)
   {
     DIR * dirfp = opendir(inDir.c_str());
@@ -94,7 +102,7 @@ public:
       if (basename == "." || basename == ".." || basename == ".git")
         continue;
 
-      if (isAtVerbosity(VerboseNS::E_DEBUG)) {
+      if (_verbosity.isAtVerbosity(VerboseNS::E_DEBUG)) {
         std::cout << std::endl;
       }
 
@@ -102,7 +110,7 @@ public:
       absPath = inDir;
       absPath += "/";
       absPath += basename;
-      if (isAtVerbosity(VerboseNS::E_DEBUG)) {
+      if (_verbosity.isAtVerbosity(VerboseNS::E_DEBUG)) {
         std::cout << "absPath  " << absPath << std::endl;
       }
 
@@ -116,24 +124,28 @@ public:
         if (!realPath) {
           char strbuf[1024];
           const char * errstring = strerror_r(errno, strbuf, sizeof(strbuf));
-          std::cerr << "WARNING: Failed resolve link: " << absPath << " : " << errstring << std::endl;
+          if (_verbosity.isAtVerbosity(VerboseNS::E_VERBOSE)) {
+            std::cerr << "WARNING: Failed resolve link: " << absPath << " : " << errstring << std::endl;
+          }
           continue;
         }
         realPath = realPath;
-        if (isAtVerbosity(VerboseNS::E_DEBUG)) {
+        if (_verbosity.isAtVerbosity(VerboseNS::E_DEBUG)) {
           std::cout << "realPath " << realPath << std::endl;
         }
 
         // Avoid parsing the same file or directory twice (can happen via symbolic links):
         SetT::iterator iter = _seen.find(realPath);
         if(iter != _seen.end()) {
-          std::cout << "Skipping previously processed file or directory: " << realPath << std::endl;
+          if (_verbosity.isAtVerbosity(VerboseNS::E_VERBOSE)) {
+            std::cout << "Skipping previously processed file or directory: " << realPath << std::endl;
+          }
           continue;
         }
         _seen.insert(realPath);
           
         if ( S_ISDIR(statbuf.st_mode) ) {
-          if (isAtVerbosity(VerboseNS::E_DEBUG)) {
+          if (_verbosity.isAtVerbosity(VerboseNS::E_DEBUG)) {
             std::cout << "directory absPath " << absPath << std::endl;
           }
           // recurse:
@@ -141,17 +153,21 @@ public:
             return false;
           }
         } else if ( S_ISREG(statbuf.st_mode) || S_ISLNK(statbuf.st_mode) ) {
-          if (isAtVerbosity(VerboseNS::E_DEBUG)) {
+          if (_verbosity.isAtVerbosity(VerboseNS::E_DEBUG)) {
             std::cout << "parsable absPath " << absPath << std::endl;
           }
           if (!_visitor->visit(absPath))
             return false;
         } else {
-          std::cout << "Skipping non-regular file: " << absPath << std::endl;
+          if (_verbosity.isAtVerbosity(VerboseNS::E_VERBOSE)) {
+            std::cout << "Skipping non-regular file: " << absPath << std::endl;
+          }
           continue;
         }
       } else { // stat failed
-        std::cerr << "WARNING: Failed to stat: " << absPath << std::endl;
+        if (_verbosity.isAtVerbosity(VerboseNS::E_VERBOSE)) {
+          std::cerr << "WARNING: Failed to stat: " << absPath << std::endl;
+        }
         continue;
       }
 
@@ -170,11 +186,10 @@ private:
   typedef std::set<std::string> SetT;
   SetT _seen;
   UniqueFileVisitor * _visitor; // not owned by this object.
+  VerboseNS::VerbosityTracker _verbosity;
 };
 
-class OrgIDParser
-  : public UniqueFileVisitor
-  , public VerboseNS::VerbosityTracker<UniqueFileVisitor>
+class OrgIDParser : public UniqueFileVisitor
 {
 public:
  OrgIDParser() {}
@@ -184,18 +199,21 @@ public:
     static const char * orgExtension = ".org";
     std::size_t pos;
     if ( (pos = absPath.rfind(orgExtension)) != std::string::npos ) {
-      if (isAtVerbosity(VerboseNS::E_DEBUG)) {
+      if (_verbosity.isAtVerbosity(VerboseNS::E_VERBOSE)) {
         std::cout << "Processing " << absPath << std::endl;
       }
     }
     return true;
   }
+
+  DEFINE_SET_VERBOSITY_METHOD(OrgIDParser);
+
+private:
+  VerboseNS::VerbosityTracker _verbosity;
 };
 
 int main(int argc, char *argv[], char *const envp[])
 {
-  std::cout << "main begin" << std::endl;
-
   int verbosity = VerboseNS::E_NONE;
   bool readingDirectories = false;
   typedef std::vector<std::string> DirectoryListT;
@@ -241,8 +259,6 @@ int main(int argc, char *argv[], char *const envp[])
   }
   // Write out the org id file:
   
-
-  std::cout << "main end" << std::endl;
   return 0;
 } // end main
 
