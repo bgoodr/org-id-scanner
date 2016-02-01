@@ -18,7 +18,6 @@
 // #include <sys/time.h> // gettimeofday
 // #include <sys/types.h>
 // #include <unistd.h>
-// #include <vector>
 
 #include <sys/types.h> // opendir
 #include <dirent.h>    // opendir
@@ -28,6 +27,7 @@
 #include <unistd.h>    // stat
 
 #include <set>
+#include <vector>
 
 #include <limits.h>    // realpath
 #include <stdlib.h>    // realpath
@@ -45,7 +45,9 @@
 
 class OrgIdScanner {
 public:
-  OrgIdScanner() {}
+  OrgIdScanner() : _debug(false) {}
+
+  void setDebug(bool debug) { _debug = debug; }
   
   bool parseDirectory(const std::string & inDir)
   {
@@ -73,13 +75,17 @@ public:
       if (basename == "." || basename == ".." || basename == ".git")
         continue;
 
-      std::cout << std::endl;
+      if (_debug) {
+        std::cout << std::endl;
+      }
 
       // Fully-qualify the directory entry in preparation for calling stat:
       absPath = inDir;
       absPath += "/";
       absPath += basename;
-      std::cout << "absPath  " << absPath << std::endl;
+      if (_debug) {
+        std::cout << "absPath  " << absPath << std::endl;
+      }
 
       // Identify the type of file it is:
       int status = stat(absPath.c_str(), &statbuf);
@@ -95,7 +101,9 @@ public:
           continue;
         }
         realPath = realPath;
-        std::cout << "realPath " << realPath << std::endl;
+        if (_debug) {
+          std::cout << "realPath " << realPath << std::endl;
+        }
 
         // Avoid parsing the same file or directory twice (can happen via symbolic links):
         SetT::iterator iter = _seen.find(realPath);
@@ -106,13 +114,17 @@ public:
         _seen.insert(realPath);
           
         if ( S_ISDIR(statbuf.st_mode) ) {
-          std::cout << "directory absPath " << absPath << std::endl;
+          if (_debug) {
+            std::cout << "directory absPath " << absPath << std::endl;
+          }
           // recurse:
           if (!parseDirectory(absPath)) {
             return false;
           }
         } else if ( S_ISREG(statbuf.st_mode) || S_ISLNK(statbuf.st_mode) ) {
-          std::cout << "parsable absPath " << absPath << std::endl;
+          if (_debug) {
+            std::cout << "parsable absPath " << absPath << std::endl;
+          }
         } else {
           std::cout << "Skipping non-regular file: " << absPath << std::endl;
         }
@@ -136,6 +148,7 @@ public:
   }
 
 private:
+  bool _debug;
   typedef std::set<std::string> SetT;
   SetT _seen;
 };
@@ -146,33 +159,39 @@ int main(int argc, char *argv[], char *const envp[])
 {
   std::cout << "main begin" << std::endl;
 
-  std::string inDir;
+  bool debug = false;
+  bool readingDirectories = false;
+  typedef std::vector<std::string> DirectoryListT;
+  DirectoryListT directories;
   for (int i = 0; i < argc; i++)
   {
     std::string arg = argv[i];
     if (arg.empty()) break;
-    if (arg == "-d") {
-      if (i + 1 >= argc) {
-        std::cerr << "ERROR: Missing value of -d option." << std::endl;
-        return 1;
+    if (readingDirectories) {
+      directories.push_back(arg);
+    } else {
+      if (arg == "--") {
+        readingDirectories = true;
+      } else if (arg == "-debug") {
+        debug = true;
       }
-      inDir = argv[++i];
     }
   }
 
-  if (inDir.empty()) {
-    std::cerr << "ERROR: -d option was not specified." << std::endl;
+  if (directories.empty()) {
+    std::cerr << "ERROR: No directories specified." << std::endl;
     return 1;
   }
-
-  //std::cout << "inDir " << inDir << std::endl;
 
   OrgIdScanner scanner;
-  int success = scanner.parseDirectory(inDir);
-  if (!success) {
-    return 1;
+  scanner.setDebug(debug);
+  for (DirectoryListT::iterator cur = directories.begin(); cur != directories.end(); ++cur)
+  {
+    int success = scanner.parseDirectory(*cur);
+    if (!success) {
+      return 1;
+    }
   }
-
   // Write out the org id file:
   
 
