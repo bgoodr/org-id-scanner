@@ -227,7 +227,7 @@ public:
     stream.seekg (0, stream.beg);
 
     // Allocate memory:
-    std::vector<char> buffer(length);
+    std::string buffer(length, 0);
 
     // Read data as a block:
     stream.read(&(buffer[0]), length);
@@ -235,7 +235,8 @@ public:
     stream.close();
 
     // Print content:
-    std::cout.write(&(buffer[0]), length);
+    // std::cout.write(&(buffer[0]), length);
+    std::cout << "<<<" << buffer << ">>>" << std::endl;
 
     return true;
   }
