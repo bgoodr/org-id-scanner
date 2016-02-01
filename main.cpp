@@ -40,7 +40,7 @@
 #include <limits.h> // PATH_MAX http://stackoverflow.com/a/9449307/257924
 
 #ifndef assert
-#  define assert(x) if (!(x)) { std::cout << __FILE__ << ":" << __LINE__ << ":" << "ASSERTION FAILED: " #x " is not true" << std::endl; }
+#  define assert(x) if (!(x)) { std::cout << "ASSERTION FAILED: " #x " is not true" << std::endl; }
 #endif
 
 class OrgIdScanner {
@@ -64,7 +64,7 @@ public:
     struct stat statbuf;
     std::string absPath;
     char realpathBuf[PATH_MAX];
-    const char * realPathTmp = NULL;
+    const char * realPath = NULL;
     while ((readdir_retval = readdir_r(dirfp, &entry, &result)) == 0 && result) {
 
       std::string basename = entry.d_name;
@@ -79,49 +79,40 @@ public:
       absPath = inDir;
       absPath += "/";
       absPath += basename;
-      std::cout << __FILE__ << ":" << __LINE__ << ":" << "absPath  " << absPath << std::endl;
+      std::cout << "absPath  " << absPath << std::endl;
 
       // Identify the type of file it is:
       int status = stat(absPath.c_str(), &statbuf);
       if (status == 0) { // stat succeeded
 
-        const char * realPath = NULL;
-
-        // Get the realPath:
-        if ( S_ISLNK(statbuf.st_mode) ) {
-          std::cout << __FILE__ << ":" << __LINE__ << ":" << "found link" << std::endl;
-          realPathTmp = realpath(absPath.c_str(), realpathBuf);
-          // Warn about bad links:
-          if (!realPathTmp) {
-            char strbuf[1024];
-            const char * errstring = strerror_r(errno, strbuf, sizeof(strbuf));
-            std::cerr << "WARNING: Failed resolve link: " << absPath << " : " << errstring << std::endl;
-            continue;
-          }
-          realPath = realPathTmp;
-        } else {
-          std::cout << __FILE__ << ":" << __LINE__ << ":" << "found non-link" << std::endl;
-          realPath = absPath.c_str();
+        // Get the realPath for duplicate detection.
+        realPath = realpath(absPath.c_str(), realpathBuf);
+        // Warn about bad links:
+        if (!realPath) {
+          char strbuf[1024];
+          const char * errstring = strerror_r(errno, strbuf, sizeof(strbuf));
+          std::cerr << "WARNING: Failed resolve link: " << absPath << " : " << errstring << std::endl;
+          continue;
         }
+        realPath = realPath;
+        std::cout << "realPath " << realPath << std::endl;
 
-        std::cout << __FILE__ << ":" << __LINE__ << ":" << "realPath " << realPath << std::endl;
-
-        // Avoid parsing the same file/directory twice (can happen via symbolic links):
+        // Avoid parsing the same file or directory twice (can happen via symbolic links):
         SetT::iterator iter = _seen.find(realPath);
         if(iter != _seen.end()) {
-          std::cout << "Skipping previously processed file/directory: " << realPath << std::endl;
+          std::cout << "Skipping previously processed file or directory: " << realPath << std::endl;
           continue;
         }
         _seen.insert(realPath);
           
         if ( S_ISDIR(statbuf.st_mode) ) {
-          std::cout << __FILE__ << ":" << __LINE__ << ":" << "directory absPath " << absPath << std::endl;
+          std::cout << "directory absPath " << absPath << std::endl;
           // recurse:
           if (!parseDirectory(absPath)) {
             return false;
           }
         } else if ( S_ISREG(statbuf.st_mode) || S_ISLNK(statbuf.st_mode) ) {
-          std::cout << __FILE__ << ":" << __LINE__ << ":" << "parsable absPath " << absPath << std::endl;
+          std::cout << "parsable absPath " << absPath << std::endl;
         } else {
           std::cout << "Skipping non-regular file: " << absPath << std::endl;
         }
@@ -131,7 +122,7 @@ public:
       }
 
       // if ( (pos = absPath.rfind(orgExtension)) != std::string::npos ) {
-      //   std::cout << __FILE__ << ":" << __LINE__ << ":" << "absPath " << absPath << std::endl;
+      //   std::cout << "absPath " << absPath << std::endl;
       // }
     }
 
@@ -153,7 +144,7 @@ private:
 
 int main(int argc, char *argv[], char *const envp[])
 {
-  std::cout << __FILE__ << ":" << __LINE__ << ":" << "main begin" << std::endl;
+  std::cout << "main begin" << std::endl;
 
   std::string inDir;
   for (int i = 0; i < argc; i++)
@@ -174,7 +165,7 @@ int main(int argc, char *argv[], char *const envp[])
     return 1;
   }
 
-  //std::cout << __FILE__ << ":" << __LINE__ << ":" << "inDir " << inDir << std::endl;
+  //std::cout << "inDir " << inDir << std::endl;
 
   OrgIdScanner scanner;
   int success = scanner.parseDirectory(inDir);
@@ -185,7 +176,7 @@ int main(int argc, char *argv[], char *const envp[])
   // Write out the org id file:
   
 
-  std::cout << __FILE__ << ":" << __LINE__ << ":" << "main end" << std::endl;
+  std::cout << "main end" << std::endl;
   return 0;
 } // end main
 
