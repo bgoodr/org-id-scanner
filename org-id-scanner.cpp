@@ -164,15 +164,13 @@ public:
 
   virtual bool visit(const std::string & absPath)
   {
-    // const char * orgExtension = ".org";
-    // std::size_t pos;
-    // if ( (pos = absPath.rfind(orgExtension)) != std::string::npos ) {
-    //   std::cout << "absPath " << absPath << std::endl;
-    // }
-    if (_debug) {
-      std::cout << "visiting absPath " << absPath << std::endl;
+    static const char * orgExtension = ".org";
+    std::size_t pos;
+    if ( (pos = absPath.rfind(orgExtension)) != std::string::npos ) {
+      if (_debug) {
+        std::cout << "Processing " << absPath << std::endl;
+      }
     }
-
     return true;
   }
   
