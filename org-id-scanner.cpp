@@ -236,7 +236,44 @@ public:
 
     // Print content:
     // std::cout.write(&(buffer[0]), length);
-    std::cout << "<<<" << buffer << ">>>" << std::endl;
+    // std::cout << "<<<" << buffer << ">>>" << std::endl;
+
+     // :PROPERTIES:
+     // :ID:       subdir_t-est1-note-2d73-dd0f5b698f14
+     // :END:
+    std::size_t propBegPos = 0;
+    std::size_t propEndPos = std::string::npos;
+    std::size_t idLabelBegPos = std::string::npos;
+    std::size_t idValueBegPos = std::string::npos;
+    std::size_t idValueEndPos = std::string::npos;
+    for ( ; (propBegPos = buffer.find(":PROPERTIES:\n", propBegPos)) != std::string::npos; propBegPos++) {
+      if ((propEndPos = buffer.find(":END:\n", propBegPos)) == std::string::npos) {
+        std::cerr << "ERROR: Lacking :END: starting at position " << propBegPos << " in file " << absPath << std::endl;
+        return false;
+      }
+
+      static const char * idLabel = ":ID:";
+      if ((idLabelBegPos = buffer.find(idLabel, propBegPos)) == std::string::npos || idLabelBegPos > propEndPos) {
+        // No id found within this current property list, so move on.
+        continue;
+      }
+
+      if ((idValueBegPos = buffer.find_first_not_of(" \t", idLabelBegPos + sizeof(idLabel))) == std::string::npos || idValueBegPos > propEndPos) {
+        std::cerr << "ERROR: ID lacks a value starting at position " << idLabelBegPos << " in file " << absPath << std::endl;
+        return false;
+      }
+
+      if ((idValueEndPos = buffer.find_first_of(" \t\n", idValueBegPos)) == std::string::npos || idValueEndPos > propEndPos) {
+        std::cerr << "ERROR: ID value premature termination at position " << idValueBegPos << " in file " << absPath << std::endl;
+        return false;
+      }
+
+      if (_verbosity.isAtVerbosity(VerboseNS::E_DEBUG)) {
+        std::cout << "absPath " << absPath << " id " << buffer.substr(idValueBegPos, idValueEndPos - idValueBegPos) << std::endl;
+      }
+
+    }
+      
 
     return true;
   }
