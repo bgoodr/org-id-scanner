@@ -196,15 +196,33 @@ public:
 
   virtual bool visit(const std::string & absPath)
   {
+
+    // Only work on Org-mode files:
     static const char * orgExtension = ".org";
     std::size_t pos;
     if ( (pos = absPath.rfind(orgExtension)) != std::string::npos ) {
       if (_verbosity.isAtVerbosity(VerboseNS::E_VERBOSE)) {
         std::cout << "Processing " << absPath << std::endl;
       }
+
+      // Parse the file:
+      return parse(absPath);
+      
     }
     return true;
   }
+
+  bool parse(const std::string & absPath)
+  {
+    mmap(  NULL           // addr: Let the operating system choose
+         ,                // length: 
+         , PROT_READ      // prot: read-only
+         , MAP_PRIVATE    // flags: No need too update the file; we are just reading it.
+         ,                // fd:
+         ,                // offset:
+     )
+  }
+
 
   DEFINE_SET_VERBOSITY_METHOD(OrgIDParser);
 
