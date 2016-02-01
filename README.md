@@ -15,11 +15,11 @@ Build via:
 
     RUN_ARGUMENTS="-o id-alist-work.el -- ~/Plans/Work/Work" make all
 
-To a test run using the supplied testdata directory via:
+Do a Test run using the supplied testdata directory via:
 
     RUN_ARGUMENTS="-o id-alist-work.el -- ./testdata" make run
 
-Then execute via:
+Execute on a real directory of .org files in ~/MyOrgDirectory via:
 
     cd ~/MyOrgDirectory
     ./org-id-scanner.exe -o .org-id-locations -- .
