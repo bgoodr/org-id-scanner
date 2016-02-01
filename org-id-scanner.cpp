@@ -1,23 +1,6 @@
 // -*-mode: c++; indent-tabs-mode: nil; -*-
 
 #include <iostream>
-// #include <deque>
-// #include <float.h>           // Defines FLT_MAX
-// #include <fstream>
-// #include <ios>
-// #include <limits>
-// #include <limits.h>          // Defines LONG_MAX/INT_MAX
-// #include <map>
-// #include <math.h>            // Defines fabs
-// #include <sstream>
-// #include <stdint.h>
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <string.h>
-// #include <sys/stat.h>
-// #include <sys/time.h> // gettimeofday
-// #include <sys/types.h>
-// #include <unistd.h>
 
 #include <sys/types.h> // opendir
 #include <dirent.h>    // opendir
@@ -36,20 +19,35 @@
 #include <errno.h>     // errno
 
 
-//#include <linux/limits.h> // PATH_MAX http://stackoverflow.com/a/9449307/257924
 #include <limits.h> // PATH_MAX http://stackoverflow.com/a/9449307/257924
 
-#ifndef assert
-#  define assert(x) if (!(x)) { std::cout << "ASSERTION FAILED: " #x " is not true" << std::endl; }
-#endif
-
-class OrgIdScanner {
+class UniqueFileVisitor
+{
 public:
-  OrgIdScanner() : _debug(false) {}
+  virtual bool visit(const std::string & absPath) = 0;
+};
 
-  void setDebug(bool debug) { _debug = debug; }
+class UniqueFileScanner
+{
+public:
+  UniqueFileScanner()
+    : _debug(false)
+    , _visitor(NULL)
+  {}
+
+  UniqueFileScanner & setDebug(bool debug)
+  {
+    _debug = debug;
+    return *this;
+  }
+
+  UniqueFileScanner & setVisitor(UniqueFileVisitor * visitor)
+  {
+    _visitor = visitor;
+    return *this;
+  }
   
-  bool parseDirectory(const std::string & inDir)
+  bool scan(const std::string & inDir)
   {
     DIR * dirfp = opendir(inDir.c_str());
 
@@ -61,8 +59,6 @@ public:
     struct dirent entry;
     struct dirent *result = NULL;
     int readdir_retval = 0;
-    // const char * orgExtension = ".org";
-    // std::size_t pos;
     struct stat statbuf;
     std::string absPath;
     char realpathBuf[PATH_MAX];
@@ -118,24 +114,24 @@ public:
             std::cout << "directory absPath " << absPath << std::endl;
           }
           // recurse:
-          if (!parseDirectory(absPath)) {
+          if (!scan(absPath)) {
             return false;
           }
         } else if ( S_ISREG(statbuf.st_mode) || S_ISLNK(statbuf.st_mode) ) {
           if (_debug) {
             std::cout << "parsable absPath " << absPath << std::endl;
           }
+          if (!_visitor->visit(absPath))
+            return false;
         } else {
           std::cout << "Skipping non-regular file: " << absPath << std::endl;
+          continue;
         }
       } else { // stat failed
         std::cerr << "WARNING: Failed to stat: " << absPath << std::endl;
         continue;
       }
 
-      // if ( (pos = absPath.rfind(orgExtension)) != std::string::npos ) {
-      //   std::cout << "absPath " << absPath << std::endl;
-      // }
     }
 
     if (readdir_retval) {
@@ -151,9 +147,38 @@ private:
   bool _debug;
   typedef std::set<std::string> SetT;
   SetT _seen;
+  UniqueFileVisitor * _visitor; // not owned by this object.
 };
 
 
+class OrgIDParser : public UniqueFileVisitor
+{
+public:
+ OrgIDParser() : _debug(false) {}
+
+  OrgIDParser & setDebug(bool debug)
+  {
+    _debug = debug;
+    return *this;
+  }
+
+  virtual bool visit(const std::string & absPath)
+  {
+    // const char * orgExtension = ".org";
+    // std::size_t pos;
+    // if ( (pos = absPath.rfind(orgExtension)) != std::string::npos ) {
+    //   std::cout << "absPath " << absPath << std::endl;
+    // }
+    if (_debug) {
+      std::cout << "visiting absPath " << absPath << std::endl;
+    }
+
+    return true;
+  }
+  
+private:
+  bool _debug;
+};
 
 int main(int argc, char *argv[], char *const envp[])
 {
@@ -183,11 +208,19 @@ int main(int argc, char *argv[], char *const envp[])
     return 1;
   }
 
-  OrgIdScanner scanner;
-  scanner.setDebug(debug);
+  // OrgIDParser will house the results:
+  OrgIDParser parser;
+  parser
+    .setDebug(debug);
+
+  // UniqueFileScanner
+  UniqueFileScanner scanner;
+  scanner
+    .setDebug(debug)
+    .setVisitor(&parser);
   for (DirectoryListT::iterator cur = directories.begin(); cur != directories.end(); ++cur)
   {
-    int success = scanner.parseDirectory(*cur);
+    int success = scanner.scan(*cur);
     if (!success) {
       return 1;
     }
