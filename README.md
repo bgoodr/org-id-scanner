@@ -13,7 +13,7 @@ This is currently supported only on Linux.
 
 Build via:
 
-    RUN_ARGUMENTS="-o id-alist-work.el -- ~/Plans/Work/Work" make all
+    make all
 
 Do a Test run using the supplied testdata directory via:
 
