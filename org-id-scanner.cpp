@@ -359,7 +359,7 @@ int main(int argc, char *argv[], char *const envp[])
       std::string realPath;
       if (!realPathToString(arg, realPath, true))
         continue;
-      directories.push_back(arg);
+      directories.push_back(realPath);
     } else {
       if (arg == "--") {
         readingDirectories = true;
