@@ -23,6 +23,24 @@
 
 #include <limits.h> // PATH_MAX http://stackoverflow.com/a/9449307/257924
 
+bool realPathToString(const std::string & inPath, std::string & realPath, bool verbose)
+{
+  realPath.resize(PATH_MAX);
+  // Get the realPath for duplicate detection.
+  const char * tmp = realpath(inPath.c_str(), &(realPath[0]));
+  // Warn about bad links:
+  if (!tmp) {
+    char strbuf[1024];
+    const char * errstring = strerror_r(errno, strbuf, sizeof(strbuf));
+    if (verbose) {
+      std::cerr << "WARNING: Failed resolve: " << inPath << " : " << errstring << std::endl;
+    }
+    realPath = "";
+    return false;
+  }
+  return true;
+}
+
 namespace VerboseNS {
   
   enum VerbosityLevel {
@@ -94,8 +112,7 @@ public:
     int readdir_retval = 0;
     struct stat statbuf;
     std::string absPath;
-    char realpathBuf[PATH_MAX];
-    const char * realPath = NULL;
+    std::string realPath;
     while ((readdir_retval = readdir_r(dirfp, &entry, &result)) == 0 && result) {
 
       std::string basename = entry.d_name;
@@ -121,17 +138,9 @@ public:
       if (status == 0) { // stat succeeded
 
         // Get the realPath for duplicate detection.
-        realPath = realpath(absPath.c_str(), realpathBuf);
-        // Warn about bad links:
-        if (!realPath) {
-          char strbuf[1024];
-          const char * errstring = strerror_r(errno, strbuf, sizeof(strbuf));
-          if (_verbosity.isAtVerbosity(VerboseNS::E_VERBOSE)) {
-            std::cerr << "WARNING: Failed resolve link: " << absPath << " : " << errstring << std::endl;
-          }
+        if (!realPathToString(absPath, realPath, _verbosity.isAtVerbosity(VerboseNS::E_VERBOSE)))
           continue;
-        }
-        realPath = realPath;
+
         if (_verbosity.isAtVerbosity(VerboseNS::E_DEBUG)) {
           std::cout << "realPath " << realPath << std::endl;
         }
