@@ -305,7 +305,7 @@ public:
         stream << std::endl << " ";
       }
 
-      stream << "(\"" << absPath << "\" ";
+      stream << "(\"" << absPath << "\"";
       IdSetT & ids = cur->second;
 
       for (IdSetT::iterator cur = ids.begin(); cur != ids.end(); ++cur)
