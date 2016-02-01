@@ -38,6 +38,7 @@ bool realPathToString(const std::string & inPath, std::string & realPath, bool v
     realPath = "";
     return false;
   }
+  realPath.resize(strlen(&(realPath[0])));
   return true;
 }
 
@@ -354,6 +355,11 @@ int main(int argc, char *argv[], char *const envp[])
     std::string arg = argv[i];
     if (arg.empty()) break;
     if (readingDirectories) {
+      // Get the realPath for things like ".":
+      std::string realPath;
+      if (!realPathToString(arg, realPath, true))
+        continue;
+      std::cerr << "realPath " << realPath << std::endl;
       directories.push_back(arg);
     } else {
       if (arg == "--") {
