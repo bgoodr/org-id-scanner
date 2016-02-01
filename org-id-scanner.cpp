@@ -373,6 +373,9 @@ int main(int argc, char *argv[], char *const envp[])
           return 1;
         }
         idAlistPath = argv[++i];
+      } else if (arg == "-h" || arg == "--help") {
+        std::cerr << "USAGE: " << argv[0] << " -o OUTPUT-ALIST-FILE [ -verbose ] [ -debug ] [ -h ] -- DIR-1 DIR-2 ... DIR-N" << std::endl;
+        return 0;
       } else {
         std::cerr << "ERROR: Unrecognized option " << arg << std::endl;
         return 1;
