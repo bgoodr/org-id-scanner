@@ -23,8 +23,7 @@ include $(wildcard Makefile.$(OSBRAND) Makefile.$(OS_REV))
 CXXEXT=cpp
 CEXT=c
 
-#EXEC_FILE=mainc.exe
-EXEC_FILE=main.exe
+EXEC_FILE=org-id-scanner.exe
 EXEC_FILE_OBJS=$(patsubst %.exe,%.o,$(EXEC_FILE))
 EXEC_FILE_PREPROC_FILE=$(patsubst %.exe,%.E,$(EXEC_FILE))
 EXEC_FILE_DEP_FILE=$(patsubst %.exe,%.d,$(EXEC_FILE))
