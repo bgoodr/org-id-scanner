@@ -19,6 +19,10 @@ Do a Test run using the supplied testdata directory via:
 
     RUN_ARGUMENTS="-o id-alist-work.el -- ./testdata" make run
 
+Execute using -h to find help usage:
+
+    ./org-id-scanner.exe -h
+
 Execute on a real directory of .org files in ~/MyOrgDirectory via:
 
     cd ~/MyOrgDirectory
