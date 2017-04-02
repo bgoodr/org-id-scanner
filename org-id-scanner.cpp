@@ -108,15 +108,13 @@ public:
       return false;
     }
 
-    struct dirent entry;
-    struct dirent *result = NULL;
-    int readdir_retval = 0;
+    dirent * dirent_p = 0;
     struct stat statbuf;
     std::string absPath;
     std::string realPath;
-    while ((readdir_retval = readdir_r(dirfp, &entry, &result)) == 0 && result) {
+    while ((dirent_p = readdir(dirfp)) != 0) {
 
-      std::string basename = entry.d_name;
+      std::string basename = dirent_p->d_name;
 
       // Skip directories we obviously should not traverse into:
       if (basename == "." || basename == ".." || basename == ".git")
@@ -185,7 +183,7 @@ public:
 
     }
 
-    if (readdir_retval) {
+    if (dirent_p) {
       std::cerr << "ERROR: Failed to read from directory: " << inDir << std::endl;
       return false;
     }
