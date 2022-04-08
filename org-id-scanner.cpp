@@ -4,7 +4,7 @@
 #include <fstream>
 
 #include <sys/types.h> // opendir
-#include <dirent.h>    // opendir
+#include <dirent.h>    // opendir, readdir
 
 #include <sys/types.h> // stat
 #include <sys/stat.h>  // stat
@@ -19,9 +19,8 @@
 #include <set>
 #include <vector>
 #include <map>
-
-
 #include <limits.h> // PATH_MAX http://stackoverflow.com/a/9449307/257924
+#include <regex>
 
 bool realPathToString(const std::string & inPath, std::string & realPath, bool verbose)
 {
@@ -43,7 +42,7 @@ bool realPathToString(const std::string & inPath, std::string & realPath, bool v
 }
 
 namespace VerboseNS {
-  
+
   enum VerbosityLevel {
     E_NONE      = 0
     , E_VERBOSE = 1 << 0
@@ -69,8 +68,8 @@ namespace VerboseNS {
     _verbosity.setVerbosity(value); \
     return *this; \
   }
-  
-  
+
+
   private:
     int _verbosity;
   };
@@ -153,7 +152,7 @@ public:
           continue;
         }
         _seen.insert(realPath);
-          
+
         if ( S_ISDIR(statbuf.st_mode) ) {
           if (_verbosity.isAtVerbosity(VerboseNS::E_DEBUG)) {
             std::cout << "directory absPath " << absPath << std::endl;
@@ -201,6 +200,13 @@ private:
 
 class OrgIDParser : public UniqueFileVisitor
 {
+  std::regex _id_regexp{
+    "\n"
+    "\\s*:PROPERTIES:\\s*\n"
+    "\\s*:ID:\\s*([a-z0-9-]+)",
+    std::regex_constants::icase};
+
+
 public:
  OrgIDParser() {}
 
@@ -217,7 +223,7 @@ public:
 
       // Parse the file:
       return parse(absPath);
-      
+
     }
     return true;
   }
@@ -243,55 +249,22 @@ public:
 
     stream.close();
 
-    // Print content:
-    // std::cout.write(&(buffer[0]), length);
-    // std::cout << "<<<" << buffer << ">>>" << std::endl;
+    auto ids_begin = std::sregex_iterator(buffer.begin(), buffer.end(), _id_regexp);
+    auto ids_end = std::sregex_iterator();
 
-     // :PROPERTIES:
-     // :ID:       subdir_t-est1-note-2d73-dd0f5b698f14
-     // :END:
-    std::size_t propBegPos = 0;
-    std::size_t propEndPos = std::string::npos;
-    std::size_t idLabelBegPos = std::string::npos;
-    std::size_t idValueBegPos = std::string::npos;
-    std::size_t idValueEndPos = std::string::npos;
-    for ( ; (propBegPos = buffer.find(":PROPERTIES:\n", propBegPos)) != std::string::npos; propBegPos++) {
-      if ((propEndPos = buffer.find(":END:\n", propBegPos)) == std::string::npos) {
-        std::cerr << "ERROR: Lacking :END: starting at position " << propBegPos << " in file " << absPath << std::endl;
-        return false;
-      }
+    for (std::sregex_iterator i = ids_begin; i != ids_end; ++i) {
+      std::smatch match = *i;
+      std::string id = match.str(1);
 
-      static const char * idLabel = ":ID:";
-      if ((idLabelBegPos = buffer.find(idLabel, propBegPos)) == std::string::npos || idLabelBegPos > propEndPos) {
-        // No id found within this current property list, so move on.
-        continue;
-      }
-
-      if ((idValueBegPos = buffer.find_first_not_of(" \t", idLabelBegPos + sizeof(idLabel))) == std::string::npos || idValueBegPos > propEndPos) {
-        std::cerr << "ERROR: ID lacks a value starting at position " << idLabelBegPos << " in file " << absPath << std::endl;
-        return false;
-      }
-
-      if ((idValueEndPos = buffer.find_first_of(" \t\n", idValueBegPos)) == std::string::npos || idValueEndPos > propEndPos) {
-        std::cerr << "ERROR: ID value premature termination at position " << idValueBegPos << " in file " << absPath << std::endl;
-        return false;
-      }
-
-      std::string id = buffer.substr(idValueBegPos, idValueEndPos - idValueBegPos);
-
-      if (_verbosity.isAtVerbosity(VerboseNS::E_DEBUG)) {
-        std::cout << "absPath " << absPath << " id " << id << std::endl;
-      }
-      
       IdSetT & ids = _map[absPath]; // Create a IdSetT if one does not exist
       if (ids.find(id) != ids.end()) {
-        std::cerr << "ERROR: Duplicate ID value " << id << " at position " << idValueBegPos << " in file " << absPath << std::endl;
+        std::cerr << "ERROR: Duplicate ID value " << id << " at position " << match.position(1) << " in file " << absPath << std::endl;
         return false;
       }
       ids.insert(id);
 
     }
-      
+
     return true;
   }
 
@@ -411,7 +384,7 @@ int main(int argc, char *argv[], char *const envp[])
 
   // Write out the alist file:
   parser.writeIdAlistFile(idAlistPath);
-  
+
   return 0;
 } // end main
 
