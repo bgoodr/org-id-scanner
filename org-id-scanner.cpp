@@ -107,7 +107,7 @@ public:
       return false;
     }
 
-    struct dirent *result = NULL;
+    struct dirent *result = nullptr;
     struct stat statbuf;
     std::string absPath;
     std::string realPath;
