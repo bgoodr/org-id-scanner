@@ -176,6 +176,7 @@ public:
       } else { // stat failed
         if (_verbosity.isAtVerbosity(VerboseNS::E_VERBOSE)) {
           std::cerr << "WARNING: Failed to stat: " << absPath << std::endl;
+          errno = 0; // reset errno so we do not fail after the loop
         }
         continue;
       }
