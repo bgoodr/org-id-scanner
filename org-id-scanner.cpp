@@ -201,10 +201,20 @@ private:
 
 class OrgIDParser : public UniqueFileVisitor
 {
+  // Match ID properties:
+  //   e.g.,:
+  //     :PROPERTIES:
+  //     :CREATED_DATE: [2023-11-06 Mon 07:04]
+  //     :ID:       8874da7e-70f7-4045-b77a-bf76317919bb
+  //     :END:
+  //
+  //   Getting strict with the _id_regexp causes additional lines in the
+  //   property drawer (e.g., CREATED_DATE) to trip up the matcher so that it
+  //   does not match on ":ID:". Thus we leave it as just matching the ":ID:"
+  //   line.
+  //
   std::regex _id_regexp{
-    "\n"
-    "\\s*:PROPERTIES:\\s*\n"
-    "\\s*:ID:\\s*([a-z0-9-]+)",
+    "\\s:ID:\\s*([a-z0-9-]+)\\s*",
     std::regex_constants::icase};
 
 
