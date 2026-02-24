@@ -40,7 +40,7 @@ POSITION_INDEP_FLAGS=-fPIC
 # Define debug options:
 # --------------------------------------------------------------------------------
 ifeq ($(DEBUG_ENABLED),yes)
-  OPT_FLAGS=-DDEBUG -g -ggdb -gstabs+
+  OPT_FLAGS=-DDEBUG -g -ggdb
 else
   OPT_FLAGS=-DNDEBUG
 endif
