@@ -222,7 +222,7 @@ class OrgIDParser : public UniqueFileVisitor
     //   line.
     //
     std::regex _id_regexp{
-        "\\s:ID:\\s*([a-z0-9-]+)\\s*",
+        "\\s:ID:\\s*(\\S+)\\s*",
         std::regex_constants::icase};
 
 
