@@ -27,6 +27,14 @@ bool realPathToString(const std::string & inPath, std::string & realPath, bool v
     realPath.resize(PATH_MAX);
     // Get the realPath for duplicate detection.
     const char * tmp = realpath(inPath.c_str(), &(realPath[0]));
+    // Hack around realink weirdness that sets errno inexplicably:
+    if (tmp && EINVAL == errno && ! inPath.empty()) {
+        // Something is broken on realpath (at least on WSL+Ubuntu). The man
+        // page for realpath() states that tmp will be NULL if there is an
+        // error. But something insidreal path is setting errno to EINVAL
+        // anyway even though tmp is not nullptr.
+        errno = 0;
+    }
     // Warn about bad links:
     if (!tmp) {
         char strbuf[1024];
