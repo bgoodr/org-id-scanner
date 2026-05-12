@@ -216,15 +216,19 @@ class OrgIDParser : public UniqueFileVisitor
     //     :ID:       8874da7e-70f7-4045-b77a-bf76317919bb
     //     :END:
     //
-    //   Getting strict with the _id_regexp causes additional lines in the
-    //   property drawer (e.g., CREATED_DATE) to trip up the matcher so that it
-    //   does not match on ":ID:". Thus we leave it as just matching the ":ID:"
-    //   line.
-    //
+    // This ignores the cases where the asterisks are escaped with comma codes
+    // in front of the line (which is what happens if you have block that has
+    // org mode syntax inside of that block.)  This also matches zero or more
+    // properties inside of the properties block alongside of the ID property.
     std::regex _id_regexp{
-        "\\s:ID:\\s*(\\S+)\\s*",
+        R"((?:\n|^)\*+[^\S\n]+[^\n]+\n)"  // header line
+        R"(:PROPERTIES:\n)"               // PROPERTIES begin line
+        R"((?:[^\n]+\n)*?)"               // any other property lines
+        R"(:ID:[^\S\n]+(\S+)\n)"          // ID line
+        R"((?:[^\n]+\n)*?)"               // any other property lines
+        R"(:END:\n)"                      // PROPERTIES end line
+        ,
         std::regex_constants::icase};
-
 
     public:
     OrgIDParser() {}

@@ -45,6 +45,6 @@ else
   OPT_FLAGS=-DNDEBUG
 endif
 
-OPT_FLAGS += -O$(OPT_LEVEL)
+OPT_FLAGS += -O$(OPT_LEVEL) -std=c++17
 
 
